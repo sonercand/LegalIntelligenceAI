@@ -19,6 +19,8 @@ import asyncio
 # Google AI imports
 from google import genai
 from google.genai import types
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 # Internal imports
 from ..models.legal_models import (
@@ -33,6 +35,7 @@ from .quality_validator import QualityValidator
 
 logger = logging.getLogger(__name__)
 
+debug = True
 
 class LegalIntelligenceAgent:
     """
@@ -46,7 +49,7 @@ class LegalIntelligenceAgent:
     YOUR MISSION: Fix the TODOs to make this system work!
     """
 
-    def __init__(self, project_id: str, location: str = "us-central1", model_name: str = "gemini-2.0-flash"):
+    def __init__(self, project_id: str, location: str = "us-central1", model_name: str = "gemini-2.5-flash"):
         """Initialize the Legal Intelligence Agent system."""
         self.project_id = project_id
         self.location = location
@@ -107,9 +110,21 @@ class LegalIntelligenceAgent:
             # 4. Check the response
             # 5. Set self.initialized = True if successful
             # 6. Return True for success, False for failure
-
-            logger.error("TODO 1 not implemented: Vertex AI initialization failed")
-            return False
+            vertexai.init(project = self.project_id,location=self.location)
+            self.model = GenerativeModel(self.model_name)
+            try:
+                response=self.model.generate_content("test")
+                if debug:
+                    print('-------- success vertexai init ----')
+                    print(response.text)
+                self.initialized=True
+                return True
+            except Exception as e:
+                print("failed")
+                print(type(e).__name__)
+                print(str(e))
+                logger.error("TODO 1 not implemented: Vertex AI initialization failed")
+                return False
 
         except Exception as e:
             logger.error(f"Failed to initialize Vertex AI: {str(e)}")
@@ -260,44 +275,82 @@ class LegalIntelligenceAgent:
         persona: str,
         section_type: str,
         scenario: LegalScenario,
-        previous_sections: List[ReportSection]
+        previous_sections: List[ReportSection],
+        retry_number: int = 0
     ) -> str:
         """Build a comprehensive prompt combining persona, context, and chain-of-thought instructions."""
 
         # Start with the persona
-        prompt = persona + "\n\n"
-
-        # Add chain-of-thought reasoning instructions
-        prompt += """
-REASONING INSTRUCTIONS:
-You must use step-by-step reasoning to analyze this legal case. Structure your analysis as follows:
-1. First, identify the key legal issues
-2. Second, analyze the relevant facts
-3. Third, apply legal principles
-4. Finally, provide your conclusions
-
-Think through each step carefully before moving to the next.
-"""
-
-        # Add context from previous sections if available
+        prompt = f"{persona}\n\n"
+        # Role instructions
+        prompt += (
+        "ROLE INSTRUCTIONS:\n"
+        "You are acting strictly in the role described above. Maintain the persona’s tone, "
+        "analytical style, and domain expertise throughout the entire response.\n\n"
+        )
+        # Retry metadata
+        prompt += (
+            "RETRY METADATA:\n"
+            f"Retry Attempt: {retry_number}\n"
+            "If retry_number > 0, improve clarity, structure, completeness, and alignment with the persona’s analytical frameworks.\n\n"
+        )
+            # Reasoning instructions
+        prompt += (
+            "REASONING INSTRUCTIONS:\n"
+            "You must use step-by-step reasoning to analyze this legal case. Structure your analysis as follows:\n"
+            "1. Identify the key legal issues\n"
+            "2. Analyze the relevant facts\n"
+            "3. Apply legal principles\n"
+            "4. Provide your conclusions\n"
+            "Think through each step carefully before moving to the next.\n\n"
+        )
+         # Previous sections context
+        prompt += "PREVIOUS ANALYSIS CONTEXT:\n"
+        prompt += (
+            "Use the following previous sections ONLY as context. Do NOT repeat their content. "
+            "Do NOT restate their conclusions. Build upon them and ensure consistency.\n\n"
+        )
         if previous_sections:
-            prompt += "\n\nPREVIOUS ANALYSIS:\n"
-            for section in previous_sections[-2:]:  # Include last 2 sections for context
-                prompt += f"\n{section.title}:\n"
-                prompt += f"{section.content[:500]}...\n"  # Include summary
-
-        # Add the specific task
-        prompt += f"\n\nTASK: Provide a {section_type.replace('_', ' ')} for the following legal case:\n\n"
-
-        # Add case details
+            for section in previous_sections[-2:]:
+                excerpt = section.content[:500]
+                prompt += f"{section.title}:\n{excerpt}...\n\n"
+            else:
+                prompt += "(No previous sections available.)\n\n"
+        # Scenario details
+        prompt += "CASE DETAILS:\n"
         prompt += f"Case Name: {scenario.case_name}\n"
         prompt += f"Case Type: {scenario.case_type}\n"
+        prompt += f"Filing Date: {scenario.filing_date}\n"
+        prompt += f"Parties Involved: {', '.join(scenario.parties_involved)}\n"
         prompt += f"Key Issues: {', '.join(scenario.key_issues)}\n"
-        prompt += f"Urgency: {scenario.urgency_level}\n\n"
-        prompt += f"Complaint Summary:\n{scenario.complaint_text[:1500]}\n\n"
+        prompt += f"Urgency Level: {scenario.urgency_level}\n"
+        if scenario.additional_context:
+            prompt += f"Additional Context: {scenario.additional_context}\n"
 
-        # Add section-specific instructions
-        prompt += self._get_section_instructions(section_type)
+        prompt += "\nComplaint Summary:\n"
+        prompt += f"{scenario.complaint_text}\n\n"
+
+        # Section task
+        prompt += (
+            "SECTION TASK:\n"
+            f"Provide a {section_type.replace('_', ' ')} for the case above.\n\n"
+        )
+
+        # Section-specific instructions
+        prompt += "SECTION-SPECIFIC INSTRUCTIONS:\n"
+        prompt += self._get_section_instructions(section_type) + "\n\n"
+        # Output format requirements
+        prompt += (
+        "OUTPUT FORMAT REQUIREMENTS:\n"
+        "Your output MUST follow this structure:\n"
+        f"SECTION TITLE: {self._get_section_title(section_type)}\n"
+        "1. Key Issues\n"
+        "2. Fact Analysis\n"
+        "3. Legal Principles\n"
+        "4. Conclusions\n"
+        "Ensure each section is clearly labeled and aligned with the persona’s analytical style.\n"
+        )
+
 
         return prompt
 
