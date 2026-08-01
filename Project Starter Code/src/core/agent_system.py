@@ -68,12 +68,12 @@ class LegalIntelligenceAgent:
         self.total_attempts = 0
 
         # Configuration
-        self.generation_config = types.GenerateContentConfig(
-            temperature=0.7,
-            top_p=0.95,
-            top_k=40,
-            max_output_tokens=2048,
-        )
+        self.generation_config = {
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 2048,
+        }
 
         logger.info(f"LegalIntelligenceAgent initialized for project {project_id}")
 
@@ -166,34 +166,78 @@ class LegalIntelligenceAgent:
         - Extract token counts from response.usage_metadata
         - Use self._calculate_cost() for cost calculation
         """
+               # TODO 2: Implement content generation with retry logic
+                # YOUR CODE HERE (approximately 25-35 lines)
+                # Steps:
+                # 1. Set max_retries = 3
+                # 2. Loop for retry attempts
+                # 3. Try to generate content using self.model.generate_content()
+                # 4. Extract text from response
+                # 5. Create TokenUsage from response.usage_metadata
+                # 6. Calculate cost using self._calculate_cost()
+                # 7. Handle exceptions with exponential backoff
+                # 8. Return (content, token_usage, cost)
+        
+
+  
         if not self.initialized:
             raise RuntimeError("Agent system not initialized. Call initialize_vertex_ai() first.")
 
         start_time = time.time()
         previous_sections = previous_sections or []
-
+        max_retries = 3
+        last_error = None
         # Build the comprehensive prompt
-        prompt = self._build_prompt(persona, section_type, scenario, previous_sections)
+        for attempt in range(max_retries):
+            retry_number = attempt
+            try:
+                prompt = self._build_prompt(persona, section_type, scenario, previous_sections,retry_number=retry_number)
+                response = self.model.generate_content(
+                    contents=prompt,
+                    generation_config=self.generation_config)
+                # Extract text
+                if hasattr(response, "text"):
+                    content = response.text
+                elif hasattr(response, "candidates") and response.candidates:
+                    content = response.candidates[0].content.parts[0].text
+                else:
+                    raise ValueError("Model returned no text content.")  
+                # Extract usage metadata safely
+                usage = getattr(response, "usage_metadata", None)
+                if usage:
+                    input_tokens = getattr(usage, "prompt_token_count", 0)
+                    output_tokens = getattr(usage, "candidates_token_count", 0)
+                    total_tokens = getattr(usage, "total_token_count", input_tokens + output_tokens)
+                else:
+                    input_tokens = output_tokens = total_tokens = 0
 
-        # TODO 2: Implement content generation with retry logic
-        # YOUR CODE HERE (approximately 25-35 lines)
-        # Steps:
-        # 1. Set max_retries = 3
-        # 2. Loop for retry attempts
-        # 3. Try to generate content using self.model.generate_content()
-        # 4. Extract text from response
-        # 5. Create TokenUsage from response.usage_metadata
-        # 6. Calculate cost using self._calculate_cost()
-        # 7. Handle exceptions with exponential backoff
-        # 8. Return (content, token_usage, cost)
+                token_usage = TokenUsage(
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens
+                )
 
-        # DUMMY IMPLEMENTATION - REPLACE THIS!
-        logger.warning("TODO 2 not implemented: Using dummy content")
-        dummy_content = f"[BROKEN] This is dummy content for {section_type}. The AI generation is not working."
-        dummy_tokens = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150)
-        dummy_cost = 0.01
+                # Cost calculation
+                cost = self._calculate_cost(token_usage) 
+                # Metrics
+                self.token_usage_history.append(token_usage)
+                self.processing_times.append(time.time() - start_time)
+                self.total_attempts += 1
+                self.success_count += 1
 
-        return dummy_content, dummy_tokens, dummy_cost
+                return content, token_usage, cost
+            except Exception as e:
+                last_error = e
+                logger.error(
+                    f"Error generating section '{section_type}' on attempt {attempt+1}: {str(e)}"
+                )
+                time.sleep(2 ** attempt)  # exponential backoff
+        self.total_attempts += 1
+        raise RuntimeError(
+                    f"Failed to generate section '{section_type}' after {max_retries} attempts. Last error: {last_error}"
+                )
+ 
+    
 
     async def generate_complete_report(self, scenario: LegalScenario) -> AnalysisReport:
         """
