@@ -142,8 +142,46 @@ class QualityValidator:
         # 5. Calculate final score (cap at 1.0)
 
         # BROKEN IMPLEMENTATION - FIX THIS!
-        logger.warning("TODO 4 not implemented: Coherence scoring broken")
-        return 0.0  # Always returns 0 - FIX THIS!
+        #1 check paragraph structure
+        paragraphs = [p.strip() for p in content.split("\n\n") if len(p.strip()) > 0]
+        if len(paragraphs)>=2:
+            score +=0.3
+        elif len(paragraphs)==1:
+            score +=0.15
+        if len(paragraphs)>0:
+            num_paragraphs = len(paragraphs)
+        else:
+            num_paragraphs = 0.00001
+        #2. Logical connector therefore...
+        connectors = ["therefore", "however", "furthermore", "moreover",
+                          "consequently", "in addition", "nevertheless"]
+        connector_hits = sum(1 for c in connectors if c in content.lower())
+        if connector_hits >= 2:
+            score += 0.2
+        elif connector_hits == 1:
+            score += 0.1
+        elif connector_hits/num_paragraphs>=3:
+            score -=0.2
+
+        # 3. Structured thinking markers
+        structure_markers = [
+            "first", "second", "third", "finally",
+            "1.", "2.", "3."
+        ]
+        structure_hits = sum(1 for m in structure_markers if m in content.lower())
+        if structure_hits >= 2:
+            score += 0.2
+        elif structure_hits == 1:
+            score += 0.1
+        # 4. Content depth (sentence count)
+        sentences = [s.strip() for s in content.split('.') if len(s.strip()) > 0]
+        if len(sentences) >= 8:
+            score += 0.3
+        elif len(sentences) >= 5:
+            score += 0.15
+
+        return min(score, 1.0)    
+
 
     def calculate_groundedness_score(
         self,

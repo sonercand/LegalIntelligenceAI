@@ -79,7 +79,7 @@ class LegalIntelligenceAgent:
 
     def initialize_vertex_ai(self) -> bool:
         """
-        TODO 1: Initialize Vertex AI and create model instance.
+        Initialize Vertex AI and create model instance.
 
         CURRENT STATE: Always returns False, can't connect to Vertex AI
 
@@ -111,7 +111,7 @@ class LegalIntelligenceAgent:
             # 5. Set self.initialized = True if successful
             # 6. Return True for success, False for failure
             vertexai.init(project = self.project_id,location=self.location)
-            self.model = GenerativeModel(self.model_name)
+            self.model = GenerativeModel(self.model_name) # got some errors despite the hints tests are expecting model attr.
             try:
                 response=self.model.generate_content("test")
                 if debug:
@@ -270,6 +270,7 @@ class LegalIntelligenceAgent:
 
             validation = self.quality_validator.validate_section(
                 content,
+                section_type=section_type,
                 expected_elements=self._get_expected_elements(section_type)
             )
 
@@ -288,6 +289,7 @@ class LegalIntelligenceAgent:
 
                 validation = self.quality_validator.validate_section(
                     content,
+                    section_type=section_type,
                     expected_elements=self._get_expected_elements(section_type)
                 )
                 quality_score = validation.overall_score
@@ -516,8 +518,9 @@ Provide strategic recommendations by:
         """Calculate cost based on token usage."""
         # Example pricing (adjust based on actual Vertex AI pricing)
         # Gemini pricing as of 2024: ~$0.00025 per 1K input tokens, ~$0.00125 per 1K output tokens
-        input_cost = (token_usage.input_tokens / 1000) * 0.00025
-        output_cost = (token_usage.output_tokens / 1000) * 0.00125
+        #uptaded for 2026 August pricing for GEMINI 2.5 flash
+        input_cost = (token_usage.input_tokens / 1000) * 0.00030
+        output_cost = (token_usage.output_tokens / 1000) * 0.00250 
         return input_cost + output_cost
 
     # Metric tracking methods
