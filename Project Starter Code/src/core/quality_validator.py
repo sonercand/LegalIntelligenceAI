@@ -240,9 +240,25 @@ class QualityValidator:
         # 5. Check expected elements coverage
         # 6. Calculate final score (cap at 1.0)
 
-        # BROKEN IMPLEMENTATION - FIX THIS!
-        logger.warning("TODO 5 not implemented: Groundedness scoring broken")
-        return 0.0  # Always returns 0 - FIX THIS!
+        content_lower = content.lower()
+        # 1. Section-specific keywords
+        keyword_map = {
+            "liability_assessment": ["liability", "negligence", "breach", "duty", "causation"],
+            "damage_calculation": ["damages", "compensation", "calculation", "quantum"],
+            "prior_art_analysis": ["prior art", "patent", "novelty", "obviousness"],
+            "competitive_landscape": ["competitors", "market", "positioning", "share"],
+            "risk_assessment": ["risk", "probability", "impact", "mitigation"],
+            "strategic_recommendations": ["recommendation", "strategy", "implementation", "timeline"]
+        }
+        keywords = keyword_map.get(section_type, [])
+        keyword_hits = sum(1 for kw in keywords if kw in content_lower)
+
+        if keyword_hits >= len(keywords) * 0.75:
+            score += 0.4
+        elif keyword_hits >= len(keywords) * 0.5:
+            score += 0.25
+        elif keyword_hits > 0:
+            score += 0.15
 
     def _calculate_completeness_score(self, content: str, expected_elements: List[str]) -> float:
         """Calculate how completely the content addresses requirements."""
