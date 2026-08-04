@@ -113,7 +113,8 @@ class TestTODO2_ContentGeneration(unittest.TestCase):
             filing_date="2024-01-01",
             parties_involved=["Party A", "Party B"],
             key_issues=["Issue 1"],
-            urgency_level="standard"
+            urgency_level="standard",
+            additional_context=None
         )
 
         # Generate content
@@ -149,7 +150,8 @@ class TestTODO2_ContentGeneration(unittest.TestCase):
             filing_date="2024-01-01",
             parties_involved=[],
             key_issues=[],
-            urgency_level="standard"
+            urgency_level="standard",
+            additional_context=None
         )
 
         with self.assertRaises(RuntimeError) as context:
@@ -195,7 +197,8 @@ class TestTODO3_CompleteReport(unittest.TestCase):
             filing_date="2024-01-01",
             parties_involved=["Party A", "Party B"],
             key_issues=["Issue 1"],
-            urgency_level="high"
+            urgency_level="high",
+            additional_context=""
         )
 
         # Generate report

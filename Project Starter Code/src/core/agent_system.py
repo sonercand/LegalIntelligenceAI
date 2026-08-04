@@ -35,7 +35,7 @@ from .quality_validator import QualityValidator
 
 logger = logging.getLogger(__name__)
 
-debug = True
+
 
 class LegalIntelligenceAgent:
     """
@@ -72,64 +72,32 @@ class LegalIntelligenceAgent:
         "temperature": 0.7,
         "top_p": 0.95,
         "top_k": 40,
-        "max_output_tokens": 2048,
+        "max_output_tokens": 4096,
         }
 
         logger.info(f"LegalIntelligenceAgent initialized for project {project_id}")
 
     def initialize_vertex_ai(self) -> bool:
-        """
-        Initialize Vertex AI and create model instance.
-
-        CURRENT STATE: Always returns False, can't connect to Vertex AI
-
-        Requirements:
-        1. Initialize Google Gen AI client with Vertex AI support
-        2. Create a client instance configured for the project and location
-        3. Test the connection with a simple prompt
-        4. Handle errors gracefully and log them
-        5. Set self.initialized = True if successful
-
-        Hints:
-        - Use genai.Client(vertexai=True, project=..., location=...)
-        - Store the client in self.client
-        - Test with client.models.generate_content()
-        - Catch exceptions and log errors
-
-        Expected imports are already included at the top of this file.
-        """
         try:
             logger.info(f"Initializing Vertex AI for project: {self.project_id}")
 
-            # TODO 1: Initialize Vertex AI
-            # YOUR CODE HERE (approximately 10-15 lines)
-            # Steps:
-            # 1. Initialize vertexai with project and location
-            # 2. Create the GenerativeModel instance
-            # 3. Test with a simple prompt
-            # 4. Check the response
-            # 5. Set self.initialized = True if successful
-            # 6. Return True for success, False for failure
-            vertexai.init(project = self.project_id,location=self.location)
-            self.model = GenerativeModel(self.model_name) # got some errors despite the hints tests are expecting model attr.
-            try:
-                response=self.model.generate_content("test")
-                if debug:
-                    print('-------- success vertexai init ----')
-                    print(response.text)
-                self.initialized=True
-                return True
-            except Exception as e:
-                print("failed")
-                print(type(e).__name__)
-                print(str(e))
-                logger.error("TODO 1 not implemented: Vertex AI initialization failed")
-                return False
+            # Initialize Vertex AI
+            vertexai.init(project=self.project_id, location=self.location)
+
+            # Create model instance
+            self.model = GenerativeModel(self.model_name)
+
+            # Test connection
+            self.model.generate_content("test")
+
+            # Success
+            self.initialized = True
+            return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize Vertex AI: {str(e)}")
+            logger.error(f"Vertex AI initialization failed: {str(e)}")
             self.initialized = False
-            return False
+            return False      
 
     def generate_section_content(
         self,

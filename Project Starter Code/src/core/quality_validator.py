@@ -160,8 +160,8 @@ class QualityValidator:
             score += 0.2
         elif connector_hits == 1:
             score += 0.1
-        elif connector_hits/num_paragraphs>=3:
-            score -=0.2
+        #elif connector_hits/num_paragraphs>=3:
+        #   score -=0.2
 
         # 3. Structured thinking markers
         structure_markers = [
@@ -259,6 +259,27 @@ class QualityValidator:
             score += 0.25
         elif keyword_hits > 0:
             score += 0.15
+        # 2. Evidence-based reasoning indicators
+        reasoning_indicators = ["based on", "because", "due to", "as shown", "supported by"]
+        reasoning_hits = sum(1 for r in reasoning_indicators if r in content_lower)
+
+        if reasoning_hits >= 2:
+            score += 0.35
+        elif reasoning_hits == 1:
+            score += 0.15
+
+        # 3. Expected elements coverage
+        expected_hits = sum(1 for el in expected_elements if el.lower() in content_lower)
+        coverage_ratio = expected_hits / len(expected_elements) if expected_elements else 1.0
+
+        if coverage_ratio >= 0.75:
+            score += 0.3
+        elif coverage_ratio >= 0.5:
+            score += 0.2
+        elif coverage_ratio > 0:
+            score += 0.1
+
+        return min(score, 1.0)
 
     def _calculate_completeness_score(self, content: str, expected_elements: List[str]) -> float:
         """Calculate how completely the content addresses requirements."""
