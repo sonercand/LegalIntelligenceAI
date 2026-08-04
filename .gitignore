@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -151,12 +152,33 @@ activemq-data/
 .env
 .envrc
 .venv
+=======
+# Environment variables
+venv/
+.env
+.env.local
+.env.*.local
+
+# Service account keys - NEVER commit these!
+*.json
+service-account-key.json
+*-key.json
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+>>>>>>> master
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
+<<<<<<< HEAD
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -216,3 +238,32 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+=======
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Generated reports
+reports/
+output/
+*.pdf
+>>>>>>> master
